@@ -1,0 +1,461 @@
+/contracts
+    Migrations.sol
+/migrations
+    1_initial_migration.js
+/test
+truffle.js
+truffle-config.js
+
+-----
+TRUFFLE DEVELOP SIDEBAR
+
+module.exports = {
+  networks: {
+    development: {
+      host: "localhost",
+      port: 9545,
+      network_id: "*" // Match any network id
+    }
+  }
+};
+
+-----
+
+11.2.4	Deploying SimpleCoin onto a public test or production network
+
+module.exports = {
+    networks: {
+       development: {
+       host: "localhost",
+       port: 8545,
+       network_id: "*"
+    },
+    live: {
+        host: "localhost", 
+        port: 80,
+        network_id: 1,        
+    },
+    ropsten: {
+        host: "localhost", 
+        port: 80,
+        network_id: 3,        
+    }  
+};
+
+
+---
+new Web3.providers.HttpProvider("http://<host>:<port>")
+
+---
+networks: {
+  ...
+  ropsten: {
+    provider: new HDWalletProvider(mnemonic, "https://ropsten.infura.io/"),
+    network_id: '3',
+  },
+  ...
+
+----
+11.2.7	Writing JavaScript tests
+
+C:\Ethereum\Truffle\SimpleCoin>Truffle test
+Using network 'development'.
+
+Compiling .\contracts\SimpleCoin.sol...
+Compiling .\test\TestSimpleCoin.sol...
+Compiling Truffle/Assert.sol...
+Compiling Truffle/DeployedAddresses.sol...
+
+  TestSimpleCoin
+    √ testInitialBalanceUsingDeployedContract (49ms)
+
+  Contract: SimpleCoin
+    Contract: SimpleCoin.Constructor
+      √ Contract owner is sender
+
+  2 passing (1s)
+
+
+---
+it("Contract owner balance is equal to initialSupply", function() {
+    return SimpleCoin.deployed()
+    .then(function(instance) {
+        return instance.coinBalance(accounts[0]);
+    }).then(function(contractOwnerBalance) {
+        assert.equal(contractOwnerBalance.valueOf(), 10000, "the contract owner balance is not equal to the full supply of 10000");
+    });
+});	
+
+----
+
+C:\Ethereum\Truffle\SimpleCoin>Truffle test
+ 
+  TestSimpleCoin
+    √ testInitialBalanceUsingDeployedContract (49ms)
+
+  Contract: SimpleCoin
+    Contract: SimpleCoin.Constructor
+      √ Contract owner is sender
+      √ Contract owner balance is equal to initialSupply
+
+  3 passing (1s)
+
+
+----
+const SimpleCoin = artifacts.require("./SimpleCoin.sol");
+
+contract('SimpleCoin', function(accounts) {
+    contract('SimpleCoin.Constructor', function(accounts) {
+        it("Contract owner is sender", async function() {
+			
+            let simpleCoinInstance = await SimpleCoin.deployed(); //#A
+            let contractOwner = await simpleCoinInstance.owner(); //#B
+			
+            assert.equal(contractOwner.valueOf(), accounts[0], "accounts[0] wasn't the contract owner");//#C
+        });
+    });
+});
+
+-----
+
+it("Contract owner balance is equal to initialSupply", async function() {
+    let simpleCoinInstance = await SimpleCoin.deployed();
+    let contractOwnerBalance = await simpleCoinInstance.coinBalance(accounts[0]);
+
+    assert.equal(contractOwnerBalance.valueOf(), 10000, "the contract owner balance is not equal to the full supply of 10000");
+});	
+
+----
+
+contract('SimpleCoin.transfer', function(accounts) {
+    it("Succesful transfer: final sender and recipient balances are correct", function() {
+        //arrange 
+        let sender = web3.eth.accounts[0];
+        let recipient = web3.eth.accounts[1];
+        let tokensToTransfer = 200;
+			
+        const expectedSenderBalance = 9800;
+        const expectedRecipientBalance = 200;
+			
+        //act
+        return SimpleCoin.deployed() //#A
+        then(function(instance) {
+            simpleCoin = instance;
+            return simpleCoin.transfer(recipient, tokensToTransfer, {from: sender});//#B
+        }).then(function() {
+            return simpleCoin.coinBalance(sender);//#C
+        }).then(function(balance) {
+            sender_ending_balance = balance.toNumber();//#D
+            return simpleCoin.coinBalance(recipient);//#E
+        }).then(function(balance) {
+            recipient_ending_balance = balance.toNumber();
+
+            //assert
+            assert.equal(sender_ending_balance, expectedSenderBalance, "Amount wasn't correctly taken from the sender");
+            assert.equal(recipient_ending_balance, expectedRecipientBalance, "Amount wasn't correctly sent to the receiver");
+        });						
+    });		
+});
+
+----
+contract('SimpleCoin.transfer', function(accounts) {
+    it("Succesful transfer: final sender and recipient balances are correct", async function() {
+        //arrange 
+        let sender = web3.eth.accounts[0];
+        let recipient = web3.eth.accounts[1];
+        let tokensToTransfer = 200;
+			
+        const expectedSenderBalance = 9800;
+        const expectedRecipientBalance = 200;
+			
+        let simpleCoinInstance = await SimpleCoin.deployed();
+			
+        //act
+        await simpleCoinInstance.transfer(recipient, tokensToTransfer, {from: sender});
+        let sender_ending_balance = await simpleCoinInstance.coinBalance(sender);
+        let recipient_ending_balance = await simpleCoinInstance.coinBalance(recipient);			
+
+        //assert
+        assert.equal(sender_ending_balance.valueOf(), expectedSenderBalance, "Amount wasn't correctly taken from the sender");
+        assert.equal(recipient_ending_balance.valueOf(), expectedRecipientBalance, "Amount wasn't correctly sent to the receiver");						
+    });		
+});	
+
+-----
+
+12.7.1	Preparing the UI dependencies
+
+C:\Ethereum\SimpleVotingWebUI>bower install web3#0.20.6
+
+C:\Ethereum\SimpleVotingWebUI>bower install jquery
+
+C:\Ethereum\SimpleVotingWebUI>bower install truffle-contract
+
+
+bower_components
+   |-- web3
+   |-- jquery
+   |-- truffle-contract
+
+
+----
+var abi = "[{\"constant\":false,\"inputs\":[{\"name\":\"_to…
+var SimpleCoinFactory = web3.eth.contract(JSON.parse(abi));
+var simpleCoinInstance = SimpleCoinFactory.at('0x773dc5fc8fc3e...');
+
+----
+window.onload = function() {
+	$.getJSON("./contracts/SimpleVoting.json", function(json) {
+	    SimpleVoting = TruffleContract( json );
+	    
+       ...
+
+----
+12.7.2	Setting up a minimalistic web server with node.js
+
+C:\Ethereum\SimpleVotingWebUI>npm install connect serve-static
+
+var connect = require('connect');
+var serveStatic = require('serve-static');
+connect().use(serveStatic(__dirname)).listen(8080, function(){
+    console.log('Web server running on 8080...');
+});
+
+
+C:\Ethereum\SimpleVotingWebUI>node webserver.js
+
+---
+<html>
+<table><tr><td><b>test</b></td></tr></table>
+</html>
+
+---
+http://localhost:8080/test.html
+
+
+
+12.7.3	Writing the Admin page HTML
+
+JAVASCRIPT INCLUDES
+
+<head>   
+	<script src="bower_components/web3/dist/web3.min.js"></script>
+	<script src="bower_components/jquery/dist/jquery.min.js"></script>
+	<script src="bower_components/truffle-contract/dist/truffle-contract.js"></script>	
+	<script src="./simplevoting.js"></script>
+</head>
+
+
+TEXT DISPLAYING CURRENT WORKFLOW STATUS
+
+<table border="0" cellpadding="0" id='currentStatus'> 
+	<tr>
+		<td><b>Current status:</b></td>
+                        <td id='currentWorkflowStatusMessage'></td>
+		<td></td>
+		<td></td>
+	</tr>	
+</table>
+
+
+ADMINISTRATOR ADDRESS AND PASSWORD FIELDS
+
+<table border="0" cellpadding="0" id='user'> 
+	<tr>
+	    <td><b>Voter address:</b></td>
+	    <td><input type="text" id="voterAddress" width="400" /></td>
+	    <td><b>password:</b></td>
+	    <td><input type="text" id="voterPassword" width="400" /></td>
+	    <td><button onclick="unlockVoter()">Unlock account</button></td>
+	    <td id='voterMessage'></td>
+	 </tr>	
+</table>
+
+
+OTHER INPUT FIELDS
+
+<td>Voter address:</td>
+<td><input type="text" id="voterAddress" width="400" /></td>
+
+
+<table border="0" cellpadding="0" id='proposalsRegistration'> 
+	<tr>
+	    <td><button onclick="startProposalsRegistration()">Start</button></td>
+	    <td><button onclick="endProposalsRegistration()">End</button></td>
+	    <td id='proposalsRegistrationMessage'></td>
+	 </tr>	
+</table>
+
+12.7.4	Writing the Admin page JavaScript
+
+
+"networks": {
+    "1526138147842": {      "events": {},
+      "links": {},
+      "address": "0xaf18e4e373b90709cc08a231ce24015a0da4f8cc",
+      "transactionHash": "0x37ecb76d6cd6051c5d122df53db0063d1336e5b3298150b50d62e8ae845e9bbb"
+    },
+   ...
+    "1526683622193": {//#A
+      "events": {},
+      "links": {},
+      "address": "0xdaef7d6211bc0c0639178f442c68f468494b7ea2",//#B
+      "transactionHash": "0xea66f69e35ccc77845405dbc183fc0c3ce831cd977f74c5152d6f97a55ebd8af"
+    }
+	
+	
+----
+var SimpleVoting;//#A
+
+window.onload = function() {
+	$.getJSON("./contracts/SimpleVoting.json", function(json) {//#B
+	    SimpleVoting = TruffleContract( json );//#C
+	    
+		SimpleVoting.setProvider(new Web3.providers.HttpProvider("http://localhost:8545"));//#D
+
+
+----
+
+DISPLAYING THE VOTING WORKFLOW STATUS
+
+function refreshWorkflowStatus()
+{		
+    SimpleVoting.deployed() //#A
+    .then(instance => instance.getWorkflowStatus()) //#B
+    .then(workflowStatus => {
+       var workflowStatusDescription;
+		
+       switch(workflowStatus.toString()) //#C
+	  {
+          case '0':
+             workflowStatusDescription = "Registering Voters";		
+		 break;
+          case '1':
+		 workflowStatusDescription = "Proposals registration Started";
+		 break;
+          …	
+	     default:
+	          workflowStatusDescription = "Unknown status";
+	 }
+				
+	    
+    $("#currentWorkflowStatusMessage").html(workflowStatusDescription);//#D
+     });
+}
+
+
+---
+$.getJSON("./contracts/SimpleVoting.json", function(json) { ...
+
+    ...
+    refreshWorkflowStatus();
+});
+---
+UNLOCKING THE ADMINISTRATOR ACCOUNT
+
+function unlockAdmin()
+{
+	var adminAddress = $("#adminAddress").val();
+	var adminPassword = $("#adminPassword").val();
+
+	var result = web3.personal.unlockAccount(adminAddress, adminPassword, 180);//#A
+	if (result)
+		$("#adminMessage").html('The account has been unlocked');
+	else
+		$("#adminMessage").html('The account has NOT been unlocked');
+}
+
+
+VALIDATING USER INPUT
+
+function registerVoter() {
+	
+   $("#voterRegistrationMessage").html('');
+	
+   var adminAddress = $("#adminAddress").val();//#A
+   var voterToRegister = $("#voterAddress").val();//#A
+	
+   SimpleVoting.deployed()
+   .then(instance => instance.isAdministrator(adminAddress))//#B
+   .then(isAdministrator =>  {		
+       if (isAdministrator)
+       {
+	      return SimpleVoting.deployed()
+	      .then(instance => instance.isRegisteredVoter(voterToRegister))//#C
+	      .then(isRegisteredVoter => {
+	           if (isRegisteredVoter)
+		       $("#voterRegistrationMessage").html('The voter is already registered');//#D     
+                else
+	           {
+                 ...
+	           }
+	       });
+       }
+       else
+       {
+	     $("#voterRegistrationMessage").html('The given address does not correspond to the administrator');//#D
+       }
+   });
+}
+
+
+---
+return SimpleVoting.deployed()
+          .then(instance => instance.getWorkflowStatus())
+          .then(workflowStatus => {
+                 if (workflowStatus > 0)
+		        $("#voterRegistrationMessage").html('Voters registration has already ended
+                 else
+	     {
+	     ...
+
+---
+
+CALLING A TRANSACTION GENERATING CONTRACT FUNCTION		 
+
+SimpleVoting.deployed() //#A
+.then(instance => instance.registerVoter(voterToRegister, //#B
+       {from:adminAddress, gas:200000})) //#C
+.catch(e => $("#voterRegistrationMessage").html(e));//#D
+
+HANDLING CONTRACT EVENTS
+
+window.onload = function() {
+    $.getJSON("./contracts/SimpleVoting.json", function(json) {
+    …
+    SimpleVoting.deployed()
+    .then(instance => instance.WorkflowStatusChangeEvent()) //#A
+    .then(workflowStatusChangeEventSubscription => {
+             workflowStatusChangeEvent = workflowStatusChangeEventSubscription;	
+
+	  workflowStatusChangeEvent.watch(function(error, result) { //#B
+	     if (!error)
+	         refreshWorkflowStatus(); //#C
+	     else
+	         console.log(error);
+	  });			 
+    });	
+   ...
+
+   
+   ---
+SimpleVoting.deployed()
+.then(instance => instance.VoterRegisteredEvent())
+.then(voterRegisteredEventSubscription => {
+       voterRegisteredEvent = voterRegisteredEventSubscription;	
+
+       voterRegisteredEvent.watch(function(error, result) {
+       if (!error)
+	$("#voterRegistrationMessage").html('Voter successfully registered');//#A
+       else
+	console.log(error);
+       });			  
+});
+
+
+   
+
+
+	   
+
+  

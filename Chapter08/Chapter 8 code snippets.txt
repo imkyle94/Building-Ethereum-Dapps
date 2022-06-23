@@ -1,0 +1,64 @@
+---------------------------------
+--- connecting to a test network
+---------------------------------
+geth --testnet –-bootnodes "enode://145a93c5b1151911f1a232e04dd1a76708dd12694f952b8a180ced40e8c4d25a908a292bed3521b98bdd843147116a52ddb645d34fa51ae7668c39b4d1070845@188.166.147.175:30303,enode://2609b7ee28b51f2f493374fee6a2ab12deaf886c5daec948f122bc83716aca27840253d191b9e63a6e7ec77643e69ae0d74182d6bb64fd30421d45aba82c13bd@13.84.180.240:30303,enode://94c15d1b9e2fe7ce56e458b9a3b672ef11894ddedd0c6f247e0f1d3487f52b66208fb4aeb8179fce6e3a749ea93ed147c37976d67af557508d199d9594c35f09@188.166.147.175:30303" --verbosity=4
+
+-------------------------------
+--attaching the geth console
+-------------------------------
+geth attach ipc:\\.\pipe\geth.ipc
+
+-------------------------------
+-- compiling a contract
+-------------------------------
+C:\Ethereum\SimpleCoin>..\solidity-windows\solc.exe --bin -o bin --combined-json abi,bin SimpleCoin.sol > SimpleCoin.out
+
+-------------------------------
+-- deploying a contract
+-------------------------------
+
+>const simpleCoinInstance = SimpleCoinContractFactory.new(initialSupply, {
+    from: sender,
+    data: bytecode,
+    gas: gasEstimate
+   }, function (e, contract){
+    console.log(e, contract);
+    if (typeof contract.address !== 'undefined') {
+         console.log('Contract mined! address: ' + contract.address + ' transactionHash: ' + contract.transactionHash);
+    }
+ });
+
+-------------------------------
+-- transfering coins
+-------------------------------
+var transactionHash = simpleCoinInstance.transfer(account3, 20, {from:account2,gas:200000});
+console.log('SUBMITTED transfer() transaction. Transaction hash: ' + transactionHash);
+
+------------------------------------
+-- private network genesis.json file
+------------------------------------
+{
+    "config": { 
+        "chainId": 10101010,
+        "homesteadBlock": 0,
+        "eip155Block": 0,
+        "eip158Block": 0
+    },
+    "difficulty": "4000",
+    "gasLimit": "3141592",
+    "alloc": { 
+		
+    }
+}
+
+-------------------------------------------
+-- generating private network genesis block
+-------------------------------------------
+C:\program files\geth>geth --networkid 10101010 --identity "PrivateNetMaster" --rpc --rpcapi="db,eth,net,web3,personal,web3" --datadir "C:\privatenet" --port "30303" --nodiscover --maxpeers 0 init C:\privatenetdev\genesis.json
+
+-------------------------------------------
+-- running private network geth node
+-------------------------------------------
+C:\program files\geth>geth --networkid 10101010 --identity "PrivateNetMaster" --rpc --rpcapi="db,eth,net,web3,personal,web3" --datadir "C:\privatenet" --port "30303" --nodiscover --maxpeers 0
+
+

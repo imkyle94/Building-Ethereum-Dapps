@@ -1,0 +1,625 @@
+//Chapter 5 code snippets
+
+//5.1.1
+(seq
+  (def 'value 0x00)
+  (def 'dummy 0xbc23ecab)
+  (returnlll
+    (function dummy
+      (seq
+        (mstore value(calldataload 0x04))
+        (return value32)))))
+				
+pragma solidity ^0.4.0;
+contract Dummy {
+    function dummy(bytes32 _value) returns (bytes32) {
+        return _value;
+    }
+}
+
+//5.2
+def init():
+    self.storage[msg.sender] = 10000
+
+def balance_query(address):
+    return(self.storage[address])
+
+def transfer(to, amount):
+    if self.storage[msg.sender] >= amount:
+        self.storage[msg.sender] -= amount
+        self.storage[to] += amount
+
+//5.3.1. Integer - SIdebar
+contract IntConversions {
+    int256 bigNumber = 150000000000;
+    int32 mediumNegativeNumber = -450000;
+    uint16 smallPositiveNumber = 15678;
+    
+    int16 newSmallNumber = bigNumber;//#A
+    uint64 newMediumPositiveNumber = mediumNegativeNumber;//#B
+    uint32 public newMediumNumber = smallPositiveNumber; //#C
+    int256 public newBigNumber = mediumNegativeNumber; //#D
+    
+    int16 public newSmallNumber = int16(bigNumber); //#E
+    uint64 public newMediumPositiveNumber = uint64(mediumNegativeNumber); //#F
+}
+
+//5.3.1 Address examples
+contract AddressExamples {
+    address ownerAddress = 0x10abb5EfEcdC09581f8b7cb95791FE2936790b4E;
+    
+    function getOwnerBalance() public returns (uint)  {
+        uint balance = ownerAddress.balance;
+        return balance;
+    }
+}
+	
+//5.3.1 Address
+destinationAddress.transfer(10);//#A
+//--
+if (!destinationAddress.send(10)) 
+	revert(); //#A
+//--
+require(destinationAddress.send(10)); //#A
+//--
+destinationContractAddress.call("contractName", "functionName");//#A
+//--
+destinationContractAddress.call.value(10)("contractName", "functionName");//#A
+//--
+if (!destinationContractAddress.call.value(10)("contractName", "functionName")) 
+	revert(); //#A
+
+//5.3.1. Enums
+enum  InvestmentLevel {High, Medium, Low}
+InvestmentLevel level = InvestmentLevel.Medium;
+
+int16 levelValue = int16(level);
+//int16 levelValue = level; //#A
+
+//5.3.2
+pragma solidity ^0.4.0; 
+contract ReferenceTypesSample {
+    uint[] storageArray;//#A
+    
+    function f(uint[] fArray) {} //#B
+    function g(uint[] storage gArray) internal {} //#C
+    function h(uint[] memory hArray) internal  {} //#D
+}
+//--
+function f(uint[] fArray)  {
+    uint[] localArray = storageArray;//#A
+}
+//--
+function f(uint[] fArray)  { //#A
+	uint[] localArray = fArray;//#B
+}
+#A fArray is implicitly defined in memory
+#B localArray is defined in memory and it points directly to fArray
+
+//--
+function f(uint[] fArray)  { //#A
+    storageArray= fArray; //#B
+}
+#A fArray is implicitly defined in memory
+#B storageArray stores on storage a full copy of fArray
+
+//--
+function f(uint[] fArray)  { //#A
+	g(storageArray); //#B
+}
+
+function g(uint[] storage gArray) internal {} //#C
+#A fArray is implicitly defined in memory
+#B during the call gArray points directly to storageArray. If gArray is modified, storageArray is consequently modified
+#C gArray is defined explicitly in storage
+
+//--
+function f(uint[] fArray)  { //#A
+    h(storageArray); //#B
+}
+
+function h(uint[] memory hArray) internal {} //#C
+#A fArray is implicitly defined in memory
+#B during the call hArray is assigned to a clone of storageArray. 
+#C hArray is defined explicitly in memory
+
+///static arrays
+
+function f() {
+   int32[5] memory fixedSlots;
+   fixedSlots[0] = 5;
+   //...        
+}
+
+//
+
+function f() {
+   int32[5] memory fixedSlots = [int32(5), 9, 1, 3, 4];
+}
+
+//dynamic arrays
+function f(){
+   int32[] unlimitedSlots;
+}
+
+function f(){
+   int32[] unlimitedSlots;
+   unlimitedSlots.push(6);
+   unlimitedSlots.push(4);
+}
+
+function f(){
+   int32[] unlimitedSlots; //#A
+   //…
+   unlimitedSlots.length = 5; //#B
+}
+
+
+
+//string
+string name = "Roberto";
+
+///---
+pragma solidity ^0.4.11;
+
+contract Voting {
+ 
+    enum UserType {Voter, Admin, Owner}
+
+    enum MajorityType {SimpleMajority, AbsoluteMajority, SuperMajority, unanimity}
+
+    struct UserInfo {
+        address account;
+        string name;
+        string surname;
+        UserType uType;
+    }
+
+    struct Candidate {
+        address account;
+        string description;
+    }
+
+    struct VotingSession {
+        uint sessionId;
+        string description;
+        MajorityType majorityType;
+        uint8 majorityPercent;
+        Candidate[] candidates;
+        mapping (address => uint) votes;
+    }
+
+    uint numVotingSessions;
+    mapping (uint => VotingSession) votingSessions;
+
+    //...
+    function addCandidate(uint votingSessionId, address candidateAddress, string candidateDescription) {
+        Candidate memory candidate = Candidate({account:candidateAddress, description:candidateDescription});
+
+        votingSessions[votingSessionId].candidates.push(candidate);
+    }	
+}
+
+//mapping
+mapping(address => int) public coinBalance;
+
+int missingAddressBalance = coinBalance[0x6C15291028D082E1b9358e19F15C83B9c54F2BA1]; //#A
+#A missingAddressBalance == 0;
+
+//5.3.4. State variables
+pragma solidity ^0.4.0;
+
+contract StateVariablesAccesibility {
+    mapping (address => bool) private frozenAccounts; //#A
+    uint isContractLocked; //#B
+    mapping (address => bool) public tokenBalance; //#C
+
+    //...
+}
+
+#A frozenAccount can only be accessed from within this contract but not from inherited contracts
+#B isContractLocked is implicitly defined as internal, so it is accessible from within this contract and inhereted contracts
+#C tokenBalance is accessible externally and a getter function is automatically generated by the Solidity compiler
+
+
+//Constant state variables
+pragma solidity ^0.4.0;
+contract ConstantStateVariables {
+    uint constant maxTokenSupply = 10000000; //#A
+    string constant contractVersion ="2.1.5678";//#A
+
+    bytes32 constant contractHash = keccak256(contractVersion, maxTokenSupply);//#B
+    //..
+ }
+
+ //5.3.5. Functions
+ contract FunctionExamples {
+    int stateVariable;
+    
+    function process1(int _x, int _y, int _z, bool _flag) {
+    //…
+    }
+
+    function process2(int _x, int, int, bool _flag) {
+        if (_flag)
+           stateVariable = _x;
+    }
+
+//--- function output parameters
+    function calculate1(int _x, int _y, int _z, bool _flag) 
+        returns (int _alpha, int _beta, int _gamma) {  //#A
+        _alpha = _x + _y; //#B
+        _beta = _y + _z;  //#B
+        if (_flag)
+            _gamma = _alpha / _beta; //#B
+        else 
+            _gamma = _z; //#B
+    }
+	#A _alpha, _beta and _gamma are declared as returned parameters
+	#B no return statement is necessary to return the result tuple to the caller 
+	
+	function calculate2(int _x, int _y, int _z, bool _flag) 
+        returns (int, int, int) { //#A
+        int _alpha = _x + _y; //#B
+        int _beta = _y + _z; //#B
+        if (_flag)
+             return (_alpha, _beta, _alpha / _beta); //#C
+     
+        return (_alpha, _beta, _z);//#C
+    }
+	#A only the types of the return tuple are declared
+	#B _alpha, _beta are defined and assigned in the body of the function
+	#C the result tuple is returned to the caller explicitly with a return statement
+
+ }
+ 
+contract SimpleCoin {
+    function transfer(address _to, uint256 _amount) 
+	    public {} //#A
+ 
+    function checkLimit(uint256 _amount) private 
+        returns (bool) {} //#B
+
+    function validateAccount(address avcount) internal 
+        returns (bool) {} //#C
+  
+    function freezeAccount(address target, bool freeze) 
+	    external {} //#D
+}
+#A public function, accessible internally and externally
+#B private function, only accessible from within this contract
+#C private function, accessible from this and inhereted contracts
+#D external function, only accessible externally
+
+contract TaxCalculator {
+    function calculateAlpha(int _x, int _y, int _z) public returns (int _alpha)  {
+        _alpha = _x + calculateGamma(_y, _z); //#A
+    }
+
+    function calculateGamma(int _y, int _z) internal returns (int _gamma) { //#B
+        _gamma  = _y *3 +7*_z;
+    }
+}
+#A This invocation results in a call: _y and _z are accessed directly through memory references
+#B This is an internal function, not accessible from outside the contract
+
+contract GammaCalculator { //#A
+    function calculateGamma(int _y, int _z) 
+        external returns (int _gamma) {
+        _gamma  = _y *3 +7*_z;
+    }
+}
+
+contract TaxCalculator2 {
+    
+    GammaCalculator gammaCalculator;
+    
+    function TaxCalculator(address _gammaCalculatorAddress) {
+        gammaCalculator = GammaCalculator(_gammaCalculatorAddress);//#B
+    }
+    
+    function calculateAlpha(int _x, int _y, int _z) 
+        public returns (int _alpha) {
+        _alpha = _x + gammaCalculator.calculateGamma(_y, _z);//#C
+    }
+}
+#A GammaCalculator is an external contract with respect to TaxCalculator2
+#B gammaCalculator points to an instance deployed at address _gammaCalculatorAddress
+#C This is an external function invocation, which results into a transaction message that gets stored on the blockchain
+
+
+contract TaxCalculator3 {
+    function calculateAlpha(int _x, int _y, int _z) 
+        public returns (int _alpha) {
+            _alpha = _x + this.calculateGamma(_y, _z); //#A
+    }
+
+    function calculateGamma(int _y, int _z) 
+        public returns (int _gamma) { //#B
+            _gamma  = _y *3 +7*_z;
+    }
+}
+#A the call on calculateGamma through 'this' behaves as a call on an external contract, so a transaction message is generated and this gets stored on the blockchain
+#B In order to be called through this, calculateGamma must be declared as public
+
+contract TaxCalculator4 {
+    function calculateAlpha(int _x, int _y, int _z)
+        public returns (int _alpha) {
+            _alpha = _x + this.calculateGamma({_z:_z, _y:_y});//#A
+    }
+
+    function calculateGamma(int _y, int _z) 
+        public returns (int _gamma) {
+            _gamma  = _y *3 +7*_z;
+    }
+}
+#A the parameters of calculateGamma can be passed into an arbitrary order, provided the paramter names are also specified
+
+contract StockPriceOracle {
+   uint quoteFee = 500; //#A
+   mapping (string => uint) private stockPrices;  
+   
+   //...
+   
+   function getStockPrice(string _stockTicker) 
+        payable returns (uint _stockPrice) {
+        if (msg.value == quoteFee) //#B
+        {
+            //...
+            _stockPrice = stockPrices[_stockTicker];
+        }
+        else 
+            revert();//#C
+    }
+}
+#A quote price in Wei. This amount must be sent by the caller when invoking getStockPrice()
+#B The ether amount sent (in Wei) to cover the fee for the service is checked to verify it is correct 
+#C if the fee sent is incorrect the transaction is reverted and the sender is not charged
+
+contract StockPriceOracleClient {
+    
+    function buyMsft(string _stockTicker)
+    {
+		//ONLY USE CODE BELOW//DO NOT REPORT CONTRACT OR FUNCTION
+address stockPriceOracleAddress = 0x10abb5EfEcdC09581f8b7cb95791FE2936790b4E;
+uint256 quoteFee = 500;
+string memory stockTicker = "MSFT";
+ 
+if (!stockPriceOracleAddress.call.value(quoteFee)(bytes4(sha3("getStockPrice()")), _stockTicker)) //#A
+    revert(); //#B
+    }
+}
+
+contract A1 {
+    function () payable {}
+}
+
+contract A2 {
+    function () payable  {
+        revert();
+    }
+}
+
+contract SimpleCoin {
+    mapping (address => uint256) public coinBalance;       
+    //...
+}
+
+///---
+contract SimpleCoin1 {
+    mapping (address => uint256) public coinBalance;       
+    //...
+
+    function isAccountUsed(address _account) 
+        internal view returns (bool) {
+        if (this.coinBalance(_account) > 0) //#A
+            return true;
+        return false;
+    }
+}
+
+contract FunctionModifiers {
+    address owner;
+    address[] users;
+    mapping (address => bool) frozenUser;
+
+    function FunctionModifiers () {
+        owner = msg.sender; //#A
+    }
+
+    modifier onlyOwner { //#B
+        require(msg.sender == owner);
+        _;
+    }
+
+    modifier isActive(address _account) {
+        require(!frozenUser[_account]);
+        _;
+    }
+   
+    function addUser (address _userAddress) 
+        onlyOwner public { //#C
+        users.push(_userAddress);
+    }
+    
+    function refund(address addr) 
+        onlyOwner isActive(addr) public { //#D
+        //...
+    }
+}
+
+contract DefaultValues {
+    bytes4 public byteArray;
+    int32[5] public fixedSlots = [int32(5), 9, 1, 3, 4];
+}
+
+contract DeleteExample {
+    function deleteExample() returns (int32[5]) {
+        int32[5] memory fixedSlots = [int32(5), 9, 1, 3, 4];
+        //...
+        delete fixedSlots; //#A
+        return fixedSlots;
+    }
+}
+
+
+contract TaxCalculator {
+    function calculateAlpha(int _x) 
+        public returns (int _alpha)  {
+        var _gammaParams =  [int(5), 9]; //#A
+        var _gamma = calculateGamma(_gammaParams[0], _gammaParams[1]); //#B
+        _alpha = _x + _gamma;
+    }
+
+    function calculateGamma(int _y, int _z)  
+        private returns (int _gamma) {
+            _gamma  = _y *3;
+    }
+}
+
+contract Calculator {
+    function calculate(uint _x) 
+        public returns (uint _a, uint _b, bool _ok) { //#A
+        //...
+ 
+        _a = _x * 2;//#B
+        _b = _x** 3;//#B
+
+        _ok == (_a * _b) < 10000;//#B
+    }
+}
+
+var (_alpha, _beta, _success) = calculatorInstance.calculate(5);
+
+struct Factors {
+    uint alpha;
+    uint beta;
+}
+
+function destructureToStruct() 
+	public returns (uint) { 
+	//ONLY USE TWO LINES BELOW
+	var factors = Factors({alpha:0, beta:0}); 
+	(factors.alpha, factors.beta, ) = calculatorInstance.calculate(5);//#A
+	
+	return factors.alpha;
+}
+
+//---
+pragma solidity ^0.4.16;
+contract SimpleCoin {
+    mapping (address => uint256) public coinBalance; 
+    //...
+    event Transfer(address indexed from, 
+          address indexed to, uint256 value); //#A
+    //...
+
+    function transfer(address _to, uint256 _amount) public {
+        //...
+        coinBalance[msg.sender] -= _amount;  
+        coinBalance[_to] += _amount;   
+        Transfer(msg.sender, _to, _amount); //#B
+    }
+    //...
+}
+
+///---
+mapping (address => mapping (address => uint256)) public allowance;
+//--
+allowance[address1][address2] = 200; //#A
+//--
+function authorize(address _authorizedAccount, uint256 _allowance) 
+    public returns (bool success) {   
+    allowance[msg.sender][_authorizedAccount] = _allowance;  
+    return true;
+}
+//--
+function transferFrom(address _from, address _to, uint256 _amount) 
+    public returns (bool success) { 
+    require(_to != 0x0); //#A
+    require(coinBalance[_from] > _amount); //#B
+    require(coinBalance[_to] + _amount >= coinBalance[_to] ); //#C
+    require(_amount <= allowance[_from][msg.sender]); //#D 
+    coinBalance[_from] -= _amount; //#E
+    coinBalance[_to] += _amount; //#F
+    allowance[_from][msg.sender] -= _amount;//#G
+    Transfer(_from, _to, _amount);//H
+    return true;
+}
+//--
+function SimpleCoin(uint256 _initialSupply) {
+    coinBalance[msg.sender] = _initialSupply;   
+}
+//--
+address public owner;
+//--
+function SimpleCoin(uint256 _initialSupply) public {
+    owner = msg.sender; //#A
+
+    coinBalance[owner] = _initialSupply; //#B 
+}
+//--
+function mintCoin(address _recipient, uint256  _mintedAmount) public {
+    require(msg.sender == owner); //#A
+    coinBalance[_recipient] += _mintedAmount; //#B
+    Transfer(owner, _recipient, _mintedAmount); //#C
+}
+//--
+function SimpleCoin(uint256 _initialSupply) public {
+    owner = msg.sender;
+
+    mintCoin(owner, _initialSupply);//#A
+}
+//--
+mapping (address => bool) public frozenAccount;
+//--
+event FrozenAccount(address target, bool frozen);
+//--
+function freezeAccount(address target, bool freeze) public{
+    require(msg.sender == owner); //#A
+
+    frozenAccount[target] = freeze; //#B 
+    FrozenAccount(target, freeze); //#C
+}
+//--
+modifier onlyOwner {
+    if (msg.sender != owner) revert();
+    _;
+}
+//--
+function mintCoin(address _recipient, uint256  _mintedAmount) 
+    onlyOwner public { //#A            
+    coinBalance[_recipient] += _mintedAmount; 
+    Transfer(owner, _recipient, _mintedAmount); 
+}
+
+function freezeAccount(address target, bool freeze) 
+    onlyOwner public { //#A
+    frozenAccount[target] = freeze;  
+    FrozenAccount(target, freeze);
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
